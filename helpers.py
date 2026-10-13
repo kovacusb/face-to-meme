@@ -65,3 +65,34 @@ def plot_face_blendshapes_bar_graph(face_blendshapes):
   ax.set_title("Face Blendshapes")
   plt.tight_layout()
   plt.show()
+
+def draw_skeleton_on_black(rgb_image, detection_result):
+  canvas = np.zeros_like(rgb_image)   # black, same size as the original
+
+  for face_landmarks in detection_result.face_landmarks:
+    drawing_utils.draw_landmarks(
+        image=canvas,
+        landmark_list=face_landmarks,
+        connections=vision.FaceLandmarksConnections.FACE_LANDMARKS_TESSELATION,
+        landmark_drawing_spec=None,
+        connection_drawing_spec=drawing_styles.get_default_face_mesh_tesselation_style())
+    drawing_utils.draw_landmarks(
+        image=canvas,
+        landmark_list=face_landmarks,
+        connections=vision.FaceLandmarksConnections.FACE_LANDMARKS_CONTOURS,
+        landmark_drawing_spec=None,
+        connection_drawing_spec=drawing_styles.get_default_face_mesh_contours_style())
+    drawing_utils.draw_landmarks(
+        image=canvas,
+        landmark_list=face_landmarks,
+        connections=vision.FaceLandmarksConnections.FACE_LANDMARKS_LEFT_IRIS,
+        landmark_drawing_spec=None,
+        connection_drawing_spec=drawing_styles.get_default_face_mesh_iris_connections_style())
+    drawing_utils.draw_landmarks(
+        image=canvas,
+        landmark_list=face_landmarks,
+        connections=vision.FaceLandmarksConnections.FACE_LANDMARKS_RIGHT_IRIS,
+        landmark_drawing_spec=None,
+        connection_drawing_spec=drawing_styles.get_default_face_mesh_iris_connections_style())
+
+  return canvas
