@@ -5,8 +5,7 @@ from mediapipe.tasks.python import vision
 import numpy as np
 from pathlib import Path 
 import sys
-# Local module
-import helpers
+import predictor
 
 
 model_path = str(Path(__file__).parent / "face_landmarker.task")
@@ -32,7 +31,11 @@ print("Loading task...")
 detector = FaceLandmarker.create_from_options(options)
 image = mp.Image.create_from_file(IMAGE_FILE)
 print(f"Parsing {sys.argv[1]}...")
+
+# We use detection_result.face_blendshapes[0] = 
+# [list of feature elements with feature.category_name, element.score]
 detection_result = detector.detect(image)
 
-for b in sorted(detection_result.face_blendshapes[0], key=lambda b: b.score, reverse=True):
-    print(f"{b.category_name:<20} {b.score:.3f}")
+model_job = "model.joblib"
+prediction = predictor.predict(detection_result, model_job)
+print(prediction)
