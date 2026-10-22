@@ -3,10 +3,24 @@ import cv2
 import pandas as pd
 import joblib
 import mediapipe as mp
+from mediapipe.tasks import python
 from mediapipe.tasks.python import vision 
 
 
-# Initialize task
+# Callback function that receives async results from the FaceLandmarker
+
+def on_result(result, timqestamp_ms, image):
+    """Handle detection results.
+    Args:
+        result: FaceLandmarkerResult containing face landmarks and blendshapes.
+        timestamp_ms: Timestamp (in ms) associated with the input frame.
+    """
+    try:
+        # Predict emotion using the saved model
+        prediction = predict(result, "model.joblib")
+        print(f"Prediction: {prediction}")
+    except Exception as e:
+        print(f"Error processing result at {timestamp_ms}: {e}")
 model_path = "face_landmarker.task"
 
 # Options for the task
@@ -20,8 +34,9 @@ options = FaceLandmarkerOptions(
     running_mode=VisionRunningMode.LIVE_STREAM, 
     num_faces=1,
     output_facial_transformation_matrixes=False, 
-    output_face_blendshapes=True)
-
+    output_face_blendshapes=True,
+    result_callback=on_result
+)
 print("Loading task...")
 detector = FaceLandmarker.create_from_options(options)
 print("task loaded succesfully")
@@ -52,10 +67,8 @@ while True:
     # Convert BGR frame to RGB and create MediaPipe Image
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-    result = detector.detect(image)
-
-    prediction = predict(result, "model.joblib")
-    print(prediction)
+    timestamp_ms = int(cap.get(cv2.CAP_PROP_POS_MSEC))
+    detector.detect_async(image, timestamp_ms)
  
 # Release the video capture object and close any OpenCV windows
 cap.release()
