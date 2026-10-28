@@ -1,0 +1,4 @@
+__pycache__/
+.venv/
+live_draw.py 
+helpers.py 
