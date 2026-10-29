@@ -2,7 +2,6 @@ import threading
 import time
 from collections import deque, Counter
 from pathlib import Path
-
 import cv2
 import joblib
 import mediapipe as mp
@@ -10,18 +9,16 @@ import numpy as np
 
 WINDOW = "Expression Matcher"
 
-# ---------- 1. LOAD THE MODEL FIRST ----------
-# The callback uses it, so it must exist before the detector starts.
+# This model expects a 2d array of 52 blendshape features provided by mediapipe.result.faceBlendshapes[0]
 model = joblib.load("expression_model.joblib")
 
-# ---------- 2. SHARED STATE BETWEEN THE CALLBACK AND THE MAIN LOOP ----------
-# The callback runs on ANOTHER thread, so we protect shared data with a lock.
-lock = threading.Lock()
-recent = deque(maxlen=7)       # last predictions, used for the majority vote
 
-# ---------- 3. THE CALLBACK ----------
-# Correct signature: (result, output_image, timestamp_ms).
-# It only PREDICTS and stores the result. No cv2.imshow here.
+# Concurrency and softening flickering between images.
+lock = threading.Lock()
+recent = deque(maxlen=7)      
+
+
+# Receives the detection result from mediapipe task. Its asyncroious since we initialize the faceLandmaker in LIVE_STREA mode. DO NOT EDIT PLEASE :(
 def on_result(result, output_image, timestamp_ms):
     try:
         with lock:
@@ -33,7 +30,8 @@ def on_result(result, output_image, timestamp_ms):
     except Exception as e:
         print(f"Error processing result at {timestamp_ms} ms: {e}")
 
-# ---------- 4. CREATE THE DETECTOR IN LIVE_STREAM MODE ----------
+
+#Configurate and initialize task. 
 BaseOptions = mp.tasks.BaseOptions
 FaceLandmarker = mp.tasks.vision.FaceLandmarker
 FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
@@ -49,34 +47,24 @@ options = FaceLandmarkerOptions(
 detector = FaceLandmarker.create_from_options(options)
 print("Detector ready")
 
-# ---------- 5. OPEN THE WEBCAM ----------
+
+#Capture input video
 cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     raise RuntimeError("No webcam detected")
 H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 print(f"Webcam height: {H}px")
 
-# ---------- 6. LOAD THE REFERENCE IMAGES (once) ----------
+# Load and resize reference images once
 def resize_to_height(img, height):
     scale = height / img.shape[0]
     return cv2.resize(img, (int(img.shape[1] * scale), height))
 
-# model label -> filename in the memes/ folder.
-# If your files are named exactly like the labels, you can delete this mapping.
-LABEL_TO_FILE = {
-    "happy": "happy",
-    "angry": "angry",
-    "sad": "sad",
-    "surprised": "surprised",
-    "neutral": "neutral",
-    "afraid": "afraid",
-    "disgusted": "disgusted",
-}
 
 reference_dir = Path("memes")
 reference_images = {}
 for label in model.classes_:
-    path = reference_dir / f"{LABEL_TO_FILE.get(label, label)}.jpeg"
+    path = reference_dir / f"{label}.jpeg"
     img = cv2.imread(str(path), cv2.IMREAD_COLOR)
     if img is None:
         raise RuntimeError(f"Missing reference image {path}")
@@ -88,7 +76,6 @@ cv2.putText(placeholder, "No Face", (20, H // 2),
 
 cv2.namedWindow(WINDOW, cv2.WINDOW_NORMAL)
 
-# ---------- 7. MAIN LOOP ----------
 try:
     while True:
         ok, frame = cap.read()                        # BGR
@@ -100,7 +87,6 @@ try:
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
 
         # Async call: returns immediately. The result arrives later in on_result.
-        # The timestamp must ALWAYS increase, so we use a monotonic clock in ms.
         timestamp_ms = time.monotonic_ns() // 1_000_000
         detector.detect_async(mp_image, timestamp_ms)
 
