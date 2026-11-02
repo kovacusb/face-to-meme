@@ -16,7 +16,7 @@ The model was trained using Logistic Regression and scikit library. I decided to
 
 Another hard part of the proccess was to find a good enough training dataset. The first workig demo was trained only using my face, it worked with me but it was bad at reading other peoples expressions. I then choose KDEF for the open source nature of it and because of the density and variety of it. Of course choosing a more robust training dataset(2000+ images) would improve the model. Adding more subtle recognition and even hand gestures recognition, this is one of the ideas i would like to apply to the project in the future.
 
-# IMPORTAN - VIRTUAL ENVIROMENT.
+# IMPORTANT - VIRTUAL ENVIROMENT.
 In order to use this project successfully you need to setup a virtual enviroment with the dependencies listed in requirements.txt.
 
 you can do so typing: 
